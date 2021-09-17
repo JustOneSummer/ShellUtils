@@ -12,6 +12,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * shell执行工具类
+ *
  * @author LinXun
  * @date 2021/2/2 14:43 星期二
  */
@@ -51,13 +53,13 @@ public class ShellUtils {
             if (Platform.isWindows()) {
                 cmd = "cmd /c " + cmd;
             }
-            log.debug("shell exec 当前编码={}", charset);
+            log.debug("shell exec coding={}", charset);
             Process process = Runtime.getRuntime().exec(cmd);
             // 获取返回信息的流
             print(process.getInputStream(), "info", charset);
             print(process.getErrorStream(), "error", charset);
         } catch (IOException e) {
-            log.debug("shell exec error 命令={}", cmd, e);
+            log.debug("shell exec error command={}", cmd, e);
         }
     }
 
@@ -69,22 +71,37 @@ public class ShellUtils {
     public static void call(List<String> cmd, Charset charset) {
         StringBuilder cs = new StringBuilder();
         try {
+            log.debug("shell exec coding={}", charset);
             if (Platform.isWindows()) {
                 cs.append("cmd /c ");
+                cmd.forEach(c -> {
+                    cs.append(c);
+                    cs.append(" && ");
+                });
+                cs.delete(cs.length() - 4, cs.length() - 1);
+                exec(cs.toString(), charset);
+            } else {
+                for (String c : cmd) {
+                    exec(c, charset);
+                }
             }
-            cmd.forEach(c -> {
-                cs.append(c);
-                cs.append(" && ");
-            });
-            cs.delete(cs.length() - 4, cs.length() - 1);
-            log.debug("shell exec coding={}", charset);
-            Process process = Runtime.getRuntime().exec(cs.toString());
-            // 获取返回信息的流
-            print(process.getInputStream(), "info", charset);
-            print(process.getErrorStream(), "error", charset);
         } catch (IOException e) {
-            log.debug("shell exec error 命令={}", cmd, e);
+            log.debug("shell exec error command={}", cmd, e);
         }
+    }
+
+    /**
+     * 执行
+     *
+     * @param cmd     命令
+     * @param charset 编码
+     * @throws IOException 异常
+     */
+    private static void exec(String cmd, Charset charset) throws IOException {
+        Process process = Runtime.getRuntime().exec(cmd);
+        // 获取返回信息的流
+        print(process.getInputStream(), "info", charset);
+        print(process.getErrorStream(), "error", charset);
     }
 
     /**

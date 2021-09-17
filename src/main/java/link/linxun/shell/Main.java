@@ -10,11 +10,11 @@ import java.util.List;
 public class Main {
     public static void main(String[] args) {
         List<String> cmd = new ArrayList<>();
-        cmd.add("sudo ls -l");
         cmd.add("sudo cd /etc");
-        cmd.add("sudo dir");
+        cmd.add("sudo cd /web");
+        cmd.add("sudo ls -l");
         ShellUtils.call(cmd);
         System.out.println("=======================");
-        ShellUtils.call("ls -a");
+        ShellUtils.call("sudo cd /etc &&  sudo cd /web && sudo ls -l");
     }
 }
