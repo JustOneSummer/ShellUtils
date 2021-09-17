@@ -10,11 +10,11 @@ import java.util.List;
 public class Main {
     public static void main(String[] args) {
         List<String> cmd = new ArrayList<>();
-        cmd.add("ipconfig");
-        cmd.add("ping www.baidu.com");
-        cmd.add("dir");
+        cmd.add("sudo ls -l");
+        cmd.add("sudo cd /etc");
+        cmd.add("sudo dir");
         ShellUtils.call(cmd);
         System.out.println("=======================");
-        ShellUtils.call("ping qq.com");
+        ShellUtils.call("ls -a");
     }
 }

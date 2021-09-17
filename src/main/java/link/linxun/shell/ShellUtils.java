@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,7 +18,6 @@ import java.util.regex.Pattern;
 public class ShellUtils {
     private static final Logger log = LoggerFactory.getLogger(ShellUtils.class);
     private static final Pattern PATTERN_WINDOWS = Pattern.compile("\\d(.*)");
-    private static final Pattern PATTERN_LINUX = Pattern.compile("LC_MESSAGES=(.*)");
 
     private ShellUtils() {
         throw new IllegalStateException("Utility class");
@@ -31,11 +29,28 @@ public class ShellUtils {
      * @param cmd 指令体 多条命令可用 && 拆分
      */
     public static void call(String cmd) {
+        call(cmd, getCharset());
+    }
+
+    /**
+     * 发送命令
+     *
+     * @param cmd 指令体-自动拆分
+     */
+    public static void call(List<String> cmd) {
+        call(cmd, getCharset());
+    }
+
+    /**
+     * 发送命令
+     *
+     * @param cmd 指令体 多条命令可用 && 拆分
+     */
+    public static void call(String cmd, Charset charset) {
         try {
             if (Platform.isWindows()) {
                 cmd = "cmd /c " + cmd;
             }
-            Charset charset = getCharset();
             log.debug("shell exec 当前编码={}", charset);
             Process process = Runtime.getRuntime().exec(cmd);
             // 获取返回信息的流
@@ -51,19 +66,19 @@ public class ShellUtils {
      *
      * @param cmd 指令体
      */
-    public static void call(List<String> cmd) {
-        List<String> cs = new ArrayList<>();
+    public static void call(List<String> cmd, Charset charset) {
+        StringBuilder cs = new StringBuilder();
         try {
             if (Platform.isWindows()) {
-                cs.add("cmd /c ");
+                cs.append("cmd /c ");
             }
             cmd.forEach(c -> {
-                cs.add(" &&");
-                cs.add(c);
+                cs.append(c);
+                cs.append(" && ");
             });
-            Charset charset = getCharset();
-            log.debug("shell exec 当前编码={}", charset);
-            Process process = Runtime.getRuntime().exec(cs.toArray(new String[0]));
+            cs.delete(cs.length() - 4, cs.length() - 1);
+            log.debug("shell exec coding={}", charset);
+            Process process = Runtime.getRuntime().exec(cs.toString());
             // 获取返回信息的流
             print(process.getInputStream(), "info", charset);
             print(process.getErrorStream(), "error", charset);
@@ -117,34 +132,28 @@ public class ShellUtils {
      * 获取系统编码
      *
      * @return 编码
-     * @throws IOException io异常
      */
-    private static Charset getCharset() throws IOException {
+    private static Charset getCharset() {
         if (Platform.isWindows()) {
-            //解析cmd当前的编码
-            Process process = Runtime.getRuntime().exec("cmd /c chcp");
-            String print = print(process.getInputStream());
-            log.debug("shell exec 系统编码信息={}", print);
-            Matcher matcher = PATTERN_WINDOWS.matcher(print);
-            if (matcher.find()) {
-                switch (matcher.group()) {
-                    case "936":
-                        return Charset.forName("GBK");
-                    case "437":
-                        return StandardCharsets.ISO_8859_1;
-                    case "65001":
-                    default:
-                        return StandardCharsets.UTF_8;
+            try {
+                //解析cmd当前的编码
+                Process process = Runtime.getRuntime().exec("cmd /c chcp");
+                String print = print(process.getInputStream());
+                log.debug("shell exec system code={}", print);
+                Matcher matcher = PATTERN_WINDOWS.matcher(print);
+                if (matcher.find()) {
+                    switch (matcher.group()) {
+                        case "936":
+                            return Charset.forName("GBK");
+                        case "437":
+                            return StandardCharsets.ISO_8859_1;
+                        case "65001":
+                        default:
+                            return StandardCharsets.UTF_8;
+                    }
                 }
-            }
-        } else if (Platform.isLinux()) {
-            //解析系统当前的编码
-            Process process = Runtime.getRuntime().exec("locale");
-            String print = print(process.getInputStream());
-            log.debug("shell exec 系统编码信息={}", print);
-            Matcher matcher = PATTERN_LINUX.matcher(print);
-            if (matcher.find()) {
-                return Charset.forName(matcher.group().split("\\.")[1].replace("\"", ""));
+            } catch (IOException e) {
+                log.error("get charset error ", e);
             }
         }
         return StandardCharsets.UTF_8;
